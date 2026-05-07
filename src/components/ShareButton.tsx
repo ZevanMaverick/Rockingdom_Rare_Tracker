@@ -81,10 +81,12 @@ export default function ShareButton({ data }: ShareButtonProps) {
           </div>
 
           <div className="w-full bg-white/80 rounded-xl p-4 space-y-3 backdrop-blur-sm border border-white">
-            <div className="flex justify-between items-center text-sm font-bold">
-              <span className="text-orange-900/60">混池已垫</span>
-              <span className="text-orange-600">{data.mixedCount}/80</span>
-            </div>
+            {typeof data.mixedCount === 'number' && (
+              <div className="flex justify-between items-center text-sm font-bold">
+                <span className="text-orange-900/60">混池已垫</span>
+                <span className="text-orange-600">{data.mixedCount}/80</span>
+              </div>
+            )}
             <div className="flex justify-between items-center text-sm font-bold">
               <span className="text-orange-900/60">个人已垫</span>
               <span className="text-green-600">{data.individualCount}/80</span>

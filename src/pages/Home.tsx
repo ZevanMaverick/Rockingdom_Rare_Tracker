@@ -18,6 +18,7 @@ export default function Home() {
           isActive?: boolean
           selectedSpiritId?: string
           mixedCount?: number
+          hideMixedProgress?: boolean
           elementCounts?: Record<string, number>
           individualCounts?: Record<string, number>
           ballCounts?: Record<string, number>
@@ -74,6 +75,7 @@ export default function Home() {
 
   const maxCount = 80
   const [mixedCount, setMixedCount] = useState(() => Math.max(0, Math.min(maxCount, persisted?.mixedCount ?? 0)))
+  const [hideMixedProgress, setHideMixedProgress] = useState(() => persisted?.hideMixedProgress ?? false)
   const [elementCounts, setElementCounts] = useState<Record<string, number>>(() => persisted?.elementCounts || {})
   const [individualCounts, setIndividualCounts] = useState<Record<string, number>>(() => persisted?.individualCounts || {})
   const [isEditingPools, setIsEditingPools] = useState(false)
@@ -106,6 +108,7 @@ export default function Home() {
       isActive,
       selectedSpiritId: selectedSpirit?.id,
       mixedCount,
+      hideMixedProgress,
       elementCounts,
       individualCounts,
       ballCounts,
@@ -113,13 +116,14 @@ export default function Home() {
       captureLog: captureLog.map((l) => ({ ...l, time: l.time.toISOString() })),
     }
     localStorage.setItem('roco_home_state_v2', JSON.stringify(next))
-  }, [isActive, selectedSpirit?.id, mixedCount, elementCounts, individualCounts, ballCounts, sessionStart, captureLog])
+  }, [isActive, selectedSpirit?.id, mixedCount, hideMixedProgress, elementCounts, individualCounts, ballCounts, sessionStart, captureLog])
 
   const resetPools = () => {
     if (confirm('确定要重置混池 / 当前目标池进度吗？')) {
       setMixedCount(0)
       setElementCounts((prev) => ({ ...prev, [elementType]: 0 }))
       setIndividualCounts((prev) => ({ ...prev, [individualKey]: 0 }))
+      setHideMixedProgress(false)
     }
   }
 
@@ -203,6 +207,7 @@ export default function Home() {
     setIsActive(true)
     setCaptureLog([])
     setIsEditingPools(false)
+    setHideMixedProgress(false)
   }
 
   const endSession = () => {
@@ -230,7 +235,7 @@ export default function Home() {
     title: '洛克王国异色收集',
     spirit: selectedSpirit,
     tag: '边抓边记',
-    mixedCount,
+    mixedCount: hideMixedProgress ? undefined : mixedCount,
     individualCount,
     cost: totalCost
   }
@@ -310,30 +315,32 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="bg-[#FFF9F0] border border-[#FFE4C4] rounded-xl p-3">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-black text-orange-950">混池保底</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-orange-900/50">全局</span>
-                </div>
-                {isEditingPools ? (
+            {!hideMixedProgress && (
+              <div className="bg-[#FFF9F0] border border-[#FFE4C4] rounded-xl p-3">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      value={mixedCount}
-                      onChange={(e) => setMixedCount(clampCount(parseInt(e.target.value) || 0))}
-                      className="w-16 px-2 py-1 text-right bg-white border border-orange-200 rounded-lg text-orange-600 font-black focus:outline-none focus:ring-1 focus:ring-orange-400"
-                    />
-                    <span className="text-sm font-black text-orange-900/50">/ {maxCount}</span>
+                    <span className="font-black text-orange-950">混池保底</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-orange-900/50">全局</span>
                   </div>
-                ) : (
-                  <span className="text-sm font-black text-orange-600">{mixedCount} / {maxCount}</span>
-                )}
+                  {isEditingPools ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={mixedCount}
+                        onChange={(e) => setMixedCount(clampCount(parseInt(e.target.value) || 0))}
+                        className="w-16 px-2 py-1 text-right bg-white border border-orange-200 rounded-lg text-orange-600 font-black focus:outline-none focus:ring-1 focus:ring-orange-400"
+                      />
+                      <span className="text-sm font-black text-orange-900/50">/ {maxCount}</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm font-black text-orange-600">{mixedCount} / {maxCount}</span>
+                  )}
+                </div>
+                <div className="h-2 bg-white rounded-full overflow-hidden border border-[#FFE4C4]">
+                  <div className="h-full transition-all duration-500" style={getFillStyle(mixedCount, maxCount)} />
+                </div>
               </div>
-              <div className="h-2 bg-white rounded-full overflow-hidden border border-[#FFE4C4]">
-                <div className="h-full transition-all duration-500" style={getFillStyle(mixedCount, maxCount)} />
-              </div>
-            </div>
+            )}
 
             <div className="bg-[#FFF9F0] border border-[#FFE4C4] rounded-xl p-3">
               <div className="flex items-center justify-between mb-2">
@@ -367,6 +374,7 @@ export default function Home() {
           <div className="pt-4 border-t border-[#FFF9F0]">
             {(() => {
               const showOther = individualCount >= 50 || isEditingPools
+              const showMixed = showOther && !hideMixedProgress
 
               return (
                 <div className="space-y-3">
@@ -410,12 +418,12 @@ export default function Home() {
                       <div className="h-full transition-all duration-500" style={getFillStyle(individualCount, maxCount)} />
                     </div>
 
-                    {!showOther && (
+                    {!showOther && !hideMixedProgress && (
                       <div className="mt-2 text-[11px] text-orange-900/50 font-bold">达到 50 后自动显示混池</div>
                     )}
                   </div>
 
-                  {showOther && (
+                  {showMixed && (
                     <div className="grid grid-cols-1 gap-3">
                       <div className="bg-[#FFF9F0] border border-[#FFE4C4] rounded-xl p-3">
                         <div className="flex items-center justify-between mb-2">
@@ -465,7 +473,10 @@ export default function Home() {
             </button>
 
             <button
-              onClick={() => handleCapture(true, 'elementAndIndividual', 'shiny', `目标异色：${selectedSpirit?.name}`)}
+              onClick={() => {
+                setHideMixedProgress(true)
+                handleCapture(true, 'elementAndIndividual', 'shiny', `目标异色：${selectedSpirit?.name}`)
+              }}
               className="w-full py-5 bg-gradient-to-br from-orange-400 to-orange-500 text-white rounded-3xl font-black text-lg hover:from-orange-500 hover:to-orange-600 shadow-sm active:scale-95 shadow-orange-500/30 flex flex-col items-center justify-center gap-1"
             >
               <span>目标异色</span>
